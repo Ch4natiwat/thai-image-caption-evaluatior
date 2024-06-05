@@ -10,12 +10,12 @@ import torch
 import os
 
 
-NUMBER_OF_CANDIDATES = 2
-EPOCHS = 1
+NUMBER_OF_CANDIDATES = 10
+EPOCHS = 20
 VALIDATION_STEP = 500
 
 
-model = Discriminator(number_of_candidates=NUMBER_OF_CANDIDATES, hidden_layer_size=1)
+model = Discriminator(number_of_candidates=NUMBER_OF_CANDIDATES, hidden_layer_size=4096)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
@@ -23,21 +23,21 @@ train_transforms = transforms.Compose([
     Rescale(224),
     Tokenize(XLMRobertaTokenizer.from_pretrained("xlm-roberta-base")),
     ToTensor(),
-    ToDevice("cpu")
+    ToDevice("cuda")
 ])
 train_dataset = SimilarityDetectorDataset(
-    "data/train/train.csv", "data/train/images", 
+    "data/sample/train.csv", "data/sample/images", 
     number_of_candidates=NUMBER_OF_CANDIDATES, 
     transform=train_transforms
 )
 validation_dataset = SimilarityDetectorDataset(
-    "data/train/train.csv", "data/train/images", 
+    "data/sample/val.csv", "data/sample/images", 
     number_of_candidates=NUMBER_OF_CANDIDATES, 
     transform=train_transforms
 )
 
-train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=0)
-validation_dataloader = DataLoader(validation_dataset, batch_size=1, shuffle=True, num_workers=0)
+train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=8)
+validation_dataloader = DataLoader(validation_dataset, batch_size=16, shuffle=True, num_workers=8)
 
 try:
     for epoch in tqdm(range(EPOCHS)):
@@ -65,7 +65,7 @@ try:
                 
                 model.eval()
                 
-                for samples in tqdm(train_dataloader, desc="Validating"):
+                for samples in tqdm(validation_dataloader, desc="Validating"):
                 
                     correct_caption = samples["correct_caption"]
                     correct_image = samples["correct_image"]
@@ -78,6 +78,8 @@ try:
                     losses.append(loss.detach().cpu().item())
                     
                 print(sum(losses) / len(losses))
+                
+        torch.save(model.state_dict(), os.path.join(os.path.dirname(__file__), f"model_{epoch + 1}.pth"))
                 
 finally:
     torch.save(model.state_dict(), os.path.join(os.path.dirname(__file__), f"model_{epoch + 1}.pth"))
