@@ -12,10 +12,18 @@ import os
 
 NUMBER_OF_CANDIDATES = 10
 EPOCHS = 20
-VALIDATION_STEP = 500
+VALIDATION_STEP = 100
 
 
 model = Discriminator(number_of_candidates=NUMBER_OF_CANDIDATES, hidden_layer_size=4096)
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+if torch.cuda.device_count() > 1:
+  model = nn.DataParallel(model)
+  
+model.to(device)
+
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
@@ -23,7 +31,7 @@ train_transforms = transforms.Compose([
     Rescale(224),
     Tokenize(XLMRobertaTokenizer.from_pretrained("xlm-roberta-base")),
     ToTensor(),
-    ToDevice("cuda")
+    ToDevice(device)
 ])
 train_dataset = SimilarityDetectorDataset(
     "data/sample/train.csv", "data/sample/images", 

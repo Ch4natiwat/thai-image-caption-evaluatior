@@ -127,7 +127,7 @@ class SimilarityDetectorDataset(Dataset):
         return len(self.similar_caption_group)
 
 
-    def __getitem__(self, index, number_of_candidates=20):
+    def __getitem__(self, index, number_of_candidates=19):
         
         data_point = self.similar_caption_group.iloc[index]
         
