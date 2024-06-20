@@ -1,0 +1,10 @@
+editdistance==0.8.1
+numpy==1.22.4
+pandas==1.3.5
+pythainlp==4.0.2
+sentencepiece==0.1.99
+scikit-image==0.19.3
+torch -i https://download.pytorch.org/whl/cu118
+torchvision -i https://download.pytorch.org/whl/cu118
+tqdm==4.66.1
+transformers==4.40.1
