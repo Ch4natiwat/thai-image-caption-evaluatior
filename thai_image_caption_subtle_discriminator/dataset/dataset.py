@@ -75,7 +75,7 @@ class ToTensor(object):
         
         if "correct_image" in sample:
             correct_image = sample["correct_image"]
-            correct_image =  torch.from_numpy(correct_image.transpose((2, 0, 1)).astype(np.float32))
+            correct_image =  torch.from_numpy(correct_image.transpose((2, 0, 1)).astype(np.float32)) if len(correct_image.shape) == 3 else torch.from_numpy(np.stack((image, image, image), axis=0).astype(np.float32))
             sample["correct_image"] = correct_image
         
         labels = sample["labels"]
