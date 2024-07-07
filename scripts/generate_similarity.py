@@ -38,9 +38,9 @@ def get_parser():
         help="An optional float argument with a default value"
     )
     parser.add_argument(
-        "--number_of_candidates",
+        "--number_of_similar_choices",
         type=int,
-        default=10,
+        default=20,
         help=""
     )
     parser.add_argument(
@@ -80,11 +80,11 @@ def main(args=None):
     output_csv_names.extend([f"unnamed_{index}.csv" for index in range(len(splits))])
     output_csv_names = output_csv_names[: len(splits)]
     
-    similarity_splits = create_similarity_splits(annotations, image_dir_path, total_images, splits)
+    number_of_similar_choices = args.number_of_similar_choices
     
     output_dir = os.path.dirname(annotation_json_path)
-    for output_name, similarity_split in zip(output_csv_names, similarity_splits):
-        similarity_split.to_csv(os.path.join(output_dir, output_name))   
+    output_paths = [os.path.join(output_dir, output_name) for output_name in output_csv_names]
+    create_similarity_splits(annotations, image_dir_path, output_paths, total_images, splits, number_of_similar_choices)   
     
     
 if __name__ == "__main__":

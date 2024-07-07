@@ -1,6 +1,5 @@
-from torchvision.models import vision_transformer, ViT_B_16_Weights
 from transformers import ViTFeatureExtractor, ViTModel
-from transformers import XLMRobertaTokenizer, XLMRobertaModel
+from transformers import XLMRobertaModel
 from torch import nn
 import torch
 
@@ -30,7 +29,9 @@ class ImageExtractor(nn.Module):
         
     def forward(self, image):
         
+        device = image.device
         inputs = self.feature_extractor(images=image, do_rescale=False, return_tensors="pt")
+        inputs = inputs.to(device)
         outputs = self.model(**inputs)
         features = outputs.last_hidden_state
             
@@ -110,31 +111,3 @@ class ImageDiscriminator(nn.Module):
         image_output = self.softmax_image(self.classifier_image(image_output))
         
         return image_output
-    
-
-class Discriminator(nn.Module):
-    
-    
-    def __init__(self, number_of_candidates=10, hidden_layer_size=4096):
-        
-        super().__init__()
-        
-        self.image_extractor = ImageExtractor()
-        self.caption_extractor = CaptionExtractor()
-        
-        self.caption_discriminator = CaptionDiscriminator(
-            self.image_extractor, self.caption_extractor, 
-            number_of_candidates, hidden_layer_size
-        )
-        self.image_discriminator = ImageDiscriminator(
-            self.image_extractor, self.caption_extractor, 
-            number_of_candidates, hidden_layer_size
-        )
-        
-        
-    def forward(self, correct_caption, correct_image, captions, images):
-        
-        caption_output = self.caption_discriminator(captions, correct_image)
-        image_output = self.image_discriminator(images, correct_caption)   
-        
-        return caption_output, image_output

@@ -6,6 +6,7 @@ from typing import List
 from tqdm import tqdm
 import pandas as pd
 import random as rd
+import csv
 import os
 
 
@@ -21,7 +22,7 @@ THAI_TOKENIZER = Tokenizer(
 )
 
 
-def create_similarity_candidates(captions: List[str], file_names: List[str], number_of_candidates: int=10, verbose: bool=True) -> pd.DataFrame:
+def create_similarity_candidates(captions: List[str], file_names: List[str], output_path: str, number_of_similar_choices: int=10, verbose: bool=True) -> pd.DataFrame:
     """_summary_
 
     Args:
@@ -35,8 +36,8 @@ def create_similarity_candidates(captions: List[str], file_names: List[str], num
     if len(captions) != len(file_names):
         raise ValueError(UNEQUAL_CAPTIONS_IMAGES_ERROR_TEXT.format(len(captions), len(file_names)))
     
-    if number_of_candidates - 1 > len(captions):
-        raise ValueError(TOO_MANY_CANDIDATES_ERROR_TEXT.format(number_of_candidates, len(captions)))
+    if number_of_similar_choices >= len(captions):
+        raise ValueError(TOO_MANY_CANDIDATES_ERROR_TEXT.format(number_of_similar_choices, len(captions)))
     
     def iou(text1, text2):
         
@@ -47,81 +48,78 @@ def create_similarity_candidates(captions: List[str], file_names: List[str], num
         
         return len(text1.intersection(text2)) / len(total_words)
     
+    # stored_similarity = {}
     
-    words = [THAI_TOKENIZER.word_tokenize(caption) for caption in captions]
-    words_with_pos = pos_tag_sents(words, engine="perceptron", corpus="orchid")
-
-    processed_texts = [
-        (set(sent), set([s[0] for s in sent_with_pos if s[1].startswith("N")]))
-        for sent, sent_with_pos in zip(words, words_with_pos)
-    ]
+    captions = [caption.replace(",", "") for caption in captions]
     
-    similarity_summary = {}
-    for i in range(len(processed_texts) - 1):
-        for j in range(i + 1, len(processed_texts)):
-            if file_names[i] == file_names[j]:
+    sents = [THAI_TOKENIZER.word_tokenize(caption) for caption in captions]
+    sents_with_pos = pos_tag_sents(sents, engine="perceptron", corpus="orchid")
+    all_sent_words = [set(words) for words in sents]
+    all_noun_sent_words = [set([word[0] for word in words if word[1].startswith("N")]) for words in sents_with_pos]
+    
+    header_names = ["correct_caption", "correct_image"]
+    header_names += [f"similar_caption_{num}" for num in range(1, number_of_similar_choices + 1)]
+    header_names += [f"similar_image_{num}" for num in range(1, number_of_similar_choices + 1)]
+    
+    with open(output_path, "w") as csv_file:
+        csv_file.writelines(",".join(header_names) + "\n")
+        
+    for target_index, target_caption in enumerate(tqdm(captions)):
+        
+        target_all_words = all_sent_words[target_index]
+        target_all_noun_words = all_noun_sent_words[target_index]
+        
+        top_comparisons = []
+        for comparison_index, comparison_caption in enumerate(captions):
+            
+            if comparison_index == target_index:
+                continue
+            
+            if file_names[target_index] == file_names[comparison_index]:
                 similarity = (-1, -1)
-                # similarity = -1
+                # stored_similarity[(target_index, comparison_index)] = similarity
+            # elif (comparison_index, target_index) in stored_similarity:
+            #     similarity = stored_similarity[(comparison_index, target_index)]
             else:
-                text_1 = processed_texts[i]
-                text_2 = processed_texts[j]
-                all_iou = iou(text_1[0], text_2[0])
-                noun_iou = iou(text_1[1], text_2[1])
+                comparison_all_words = all_sent_words[comparison_index]
+                comparison_all_noun_words = all_noun_sent_words[comparison_index]
+                all_iou = iou(target_all_words, comparison_all_words)
+                noun_iou = iou(target_all_noun_words, comparison_all_noun_words)
                 similarity = (noun_iou, all_iou)
-                # similarity = all_iou
-            similarity_summary[(i, j)] = similarity
+                # stored_similarity[(target_index, comparison_index)] = similarity
+                
+            if len(top_comparisons) < number_of_similar_choices:
+                top_comparisons.append((comparison_caption, file_names[comparison_index], similarity))
+            elif similarity > top_comparisons[-1][2]:
+                top_comparisons = sorted(
+                    top_comparisons + [(comparison_caption, file_names[comparison_index], similarity)], 
+                    key=lambda comparision: comparision[2],
+                    reverse=True
+                )
+                top_comparisons = top_comparisons[: number_of_similar_choices]
+                
+        row = [target_caption, file_names[target_index]]
+        row += [comparison[0] for comparison in top_comparisons]
+        row += [comparison[1] for comparison in top_comparisons]
             
-    rows = [] 
-        
-    caption_indices = range(len(captions))
-    if verbose:
-        caption_indices = tqdm(caption_indices)
-        
-    for caption_index in caption_indices:
-        similarities = [(key, similarity) for key, similarity in similarity_summary.items() if caption_index in key]
-        similarities.sort(key=lambda x: x[1], reverse=True)
-        similarities = similarities[: number_of_candidates - 1]
-        
-        similar_captions = []
-        similar_images = []
-        for key, similarity in similarities:
-            key = [index for index in key if index != caption_index][0]
-            caption = captions[key]
-            image = file_names[key]
-            similar_captions.append(caption)
-            similar_images.append(image)
-            
-        correct_caption = captions[caption_index]
-        correct_image = file_names[caption_index]
-        
-        row = {
-            "correct_caption": correct_caption,
-            "correct_image": correct_image
-        }
-        
-        for num, caption in enumerate(similar_captions, 1):
-            row.update({f"similar_caption_{num}": caption})
-        for num, image in enumerate(similar_images, 1):
-            row.update({f"similar_image_{num}": image})
-        rows.append(row)
-        
-    similarity_candidates_df = pd.DataFrame.from_dict(rows)
-    
-    return similarity_candidates_df
+        with open(output_path, "a") as csv_file:
+            csv_file.writelines(",".join(row) + "\n")
     
     
 def create_similarity_splits(
         annotations: dict, 
         image_dir_path: str, 
+        output_paths: List[str],
         total_images: int=None,
         splits: List[float]=None,
-        number_of_candidates: int=10
+        number_of_similar_choices: int=10
     ) -> List[pd.DataFrame]:
     """_summary_
 
     Args:
         annotations (dict): _description_
         image_dir_path (str): _description_
+        output_path (List[str]): _description_
         total_images (int, optional): _description_. Defaults to None.
         splits (List[float], optional): _description_. Defaults to None.
 
@@ -181,11 +179,9 @@ def create_similarity_splits(
     no_split = splits is None
     if no_split:
         splits = [1]
-        
-    full_similarity_candidates = []
     
     split_start = 0
-    for split_index, split_size in enumerate(splits):
+    for split_index, (split_size, output_path) in enumerate(zip(splits, output_paths)):
         
         if split_index == len(splits) - 1:
             split_image_file_names = image_file_names[split_start :]
@@ -201,12 +197,6 @@ def create_similarity_splits(
                 full_file_names.append(file_name)
                 full_captions.append(caption)
                 
-        similarity_candidates = create_similarity_candidates(full_captions, full_file_names, number_of_candidates)       
-        full_similarity_candidates.append(similarity_candidates)
+        create_similarity_candidates(full_captions, full_file_names, output_path, number_of_similar_choices)       
         
-        split_start = split_end
-        
-    if no_split:
-        return full_similarity_candidates[0]
-    
-    return full_similarity_candidates           
+        split_start = split_end     
