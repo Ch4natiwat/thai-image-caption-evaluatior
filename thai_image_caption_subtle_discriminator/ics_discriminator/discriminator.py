@@ -40,14 +40,14 @@ class ImageExtractor(nn.Module):
     
 class CaptionDiscriminator(nn.Module):
     
-    def __init__(self, image_extractor, caption_extractor, number_of_candidates, hidden_layer_size):
+    def __init__(self, number_of_candidates, hidden_layer_size):
         
         self.number_of_candidates = number_of_candidates
         
         super().__init__()
         
-        self.image_extractor = image_extractor
-        self.caption_extractor = caption_extractor
+        self.image_extractor = ImageExtractor()
+        self.caption_extractor = CaptionExtractor()
         
         self.flatten_caption = nn.Flatten()
         self.fc1_caption = nn.Linear(393216 * number_of_candidates + 151296, hidden_layer_size)
@@ -82,12 +82,12 @@ class CaptionDiscriminator(nn.Module):
     
 class ImageDiscriminator(nn.Module):
     
-    def __init__(self, image_extractor, caption_extractor, number_of_candidates, hidden_layer_size):
+    def __init__(self, number_of_candidates, hidden_layer_size):
         
         super().__init__()
         
-        self.image_extractor = image_extractor
-        self.caption_extractor = caption_extractor
+        self.image_extractor = ImageExtractor()
+        self.caption_extractor = CaptionExtractor()
         
         self.flatten_image = nn.Flatten()
         self.fc1_image = nn.Linear(151296 * number_of_candidates + 393216, hidden_layer_size)

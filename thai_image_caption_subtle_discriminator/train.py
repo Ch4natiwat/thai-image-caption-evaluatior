@@ -1,18 +1,18 @@
-from ics_discriminator.discriminator import CaptionDiscriminator
+from ics_discriminator.discriminator import CaptionDiscriminator, ImageDiscriminator
 from torch.multiprocessing import set_start_method
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from pathlib import Path
 import torch.nn as nn
-from tqdm import tqdm
 import torch
 import sys
 import os
 
 sys.path.append(Path(os.path.abspath(__file__)).parents[0])
 
-from thai_image_caption_subtle_discriminator.dataset import (
+from dataset import (
     CaptionDiscriminatorDataset, 
+    ImageDiscriminatorDataset,
     get_transform
 )
 
@@ -22,7 +22,7 @@ NUMBER_OF_CANDIDATES = 5
 EPOCHS = 20
 VALIDATION_STEP = 100
 
-DATA_DIR = "data/sample"
+DATA_DIR = "data/annotations/sample_5000_train"
 
 
 if __name__ == "__main__":

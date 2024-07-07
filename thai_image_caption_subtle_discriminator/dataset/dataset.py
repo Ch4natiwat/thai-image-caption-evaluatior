@@ -160,8 +160,8 @@ class CaptionDiscriminatorDataset(Dataset):
         correct_caption = data_point.iloc[0]
         correct_image_path = os.path.join(self.image_dir, data_point.iloc[1])
         
-        similar_captions = data_point.iloc[2 : self.number_of_similar_choices + 2]        
-        similar_captions = rd.sample(similar_captions, self.number_of_similars)
+        similar_captions = data_point.iloc[2 : self.number_of_similar_choices + 2]      
+        similar_captions = rd.sample(list(similar_captions), self.number_of_similars)
         
         correct_image = io.imread(correct_image_path)
         

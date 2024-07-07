@@ -1,2 +1,2 @@
-from dataset import CaptionDiscriminatorDataset
-from dataset import get_transform
+from .dataset import CaptionDiscriminatorDataset, ImageDiscriminatorDataset
+from .dataset import get_transform
