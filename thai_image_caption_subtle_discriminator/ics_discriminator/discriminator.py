@@ -55,7 +55,6 @@ class CaptionDiscriminator(nn.Module):
         self.fc2_caption = nn.Linear(hidden_layer_size, hidden_layer_size)
         self.relu2_caption = nn.ReLU()
         self.classifier_caption = nn.Linear(hidden_layer_size, number_of_candidates)
-        self.softmax_caption = nn.Softmax(dim=1)
         
         
     def forward(self, captions, correct_image):
@@ -75,7 +74,7 @@ class CaptionDiscriminator(nn.Module):
         
         caption_output = self.relu1_caption(self.fc1_caption(caption_discriminator_features))
         caption_output = self.relu2_caption(self.fc2_caption(caption_output))
-        caption_output = self.softmax_caption(self.classifier_caption(caption_output))
+        caption_output = self.classifier_caption(caption_output)
         
         return caption_output
     
@@ -95,7 +94,6 @@ class ImageDiscriminator(nn.Module):
         self.fc2_image = nn.Linear(hidden_layer_size, hidden_layer_size)
         self.relu2_image = nn.ReLU()
         self.classifier_image = nn.Linear(hidden_layer_size, number_of_candidates)
-        self.softmax_image = nn.Softmax(dim=1)
         
         
     def forward(self, images, correct_caption):
@@ -108,6 +106,6 @@ class ImageDiscriminator(nn.Module):
         
         image_output = self.relu1_image(self.fc1_image(image_discriminator_features))
         image_output = self.relu2_image(self.fc2_image(image_output))
-        image_output = self.softmax_image(self.classifier_image(image_output))
+        image_output = self.classifier_image(image_output)
         
         return image_output
